@@ -1,0 +1,174 @@
+<table cellpadding="0" cellspacing="0" border="0">
+<tr><td><img src="include/images/icons/admin/googlemap.png" alt="" /></td><td width="30"></td><td valign="bottom"><h1>GoogleMap</h1></td></tr>
+</table>
+{EXPLODE}
+<h3>Folgende Auswahlm&ouml;glichkeiten:</h3>
+<a href="admin.php?googlemap-wokoords">Nur die aufrufen, die noch keine Koordinaten haben, aber einen Wohnort angegeben</a><br />
+<a href="admin.php?googlemap-wloc">Alle mit angegeben Wohnort aufrufen</a><br />
+<a href="admin.php?googlemap-all">Alle aufrufen (dauert l&auml;nger)</a><br />
+<br />
+<div class="info_box">
+				<b>Empfohlene Vorgehensweise</b>
+				<br />
+				<span class="smalfont">
+Am besten <i>Nur die aufrufen, die noch keine Koordinaten haben, aber einen Wohnort angegeben</i> aufrufen.<br />
+Dann <b>markiere ohne Werte</b> -> <b>Werte berechnen</b> (eventuell mehrmals) -> <b>alle markieren, die neue Werte haben</b> -> <b>Werte speichern</b><br />
+Diesen Vorgang mehrmals wiederholen, da nicht immer gleich alle Koordinaten gefunden werden.
+				</span>
+</div>
+{EXPLODE}
+<a href="javascript:void(0);" onclick="history.back();">Zur&uuml;ck</a><br /><br />
+<script src="http://maps.google.com/maps?file=api&amp;v=2&amp;key={GOOGLE_MAP_KEY}" type="text/javascript"></script>
+<script type="text/javascript">
+
+var wohnort = new Array();
+var postleitzahl = new Array();
+var changedUsers = new Array();
+var geocoder = new GClientGeocoder();
+var middtl = new GLatLng(51,10.5);
+var nmbrInput = null;
+function myLatLng(i) {
+		var mapkoords = document.forms['form'].elements['gmapkoords['+i+']'].value;
+		var adress = document.getElementById('staat_'+i).innerHTML + " " + document.getElementById('ort_'+i).innerHTML;
+        geocoder.getLatLng(adress,function (latlng){if (!latlng) {
+                                                document.forms['form'].elements['gmapkoords['+i+']'].style.backgroundColor = 'red';
+                                            } else {
+                                                document.forms['form'].elements['gmapkoords['+i+']'].value = latlng;
+                                                document.getElementById('cb_'+i).checked = false;
+                                                changedUsers[changedUsers.length] = i;
+                                                document.forms['form'].elements['gmapkoords['+i+']'].style.backgroundColor = '#00FF33';
+                                        	}
+                                    });
+}
+
+function getNmbrInput() {
+	if (nmbrInput == null) {
+		var tmp = document.forms['form'].elements['user[]'];
+		if (tmp == undefined) {
+			nmbrInput = 0;
+		} else if (typeof(tmp.length) == 'number') {
+			nmbrInput = tmp.length;
+		} else {
+			nmbrInput = 1;
+		}
+	}
+	return nmbrInput;
+}
+
+function getUserInput(i, anz){
+	if (anz > 1) {
+		return document.forms['form'].elements['user[]'][i];
+	} else if (i == 0 && anz == 1) {
+		return document.forms['form'].elements['user[]'];
+	} else return null;
+}
+
+function markall() {
+    var anz = getNmbrInput();
+    var bool = document.forms['form'].elements['inp_markall'].checked;
+    for(var i = 0; i < anz; i++) {
+        var inp = getUserInput(i, anz);
+		inp.checked = bool;
+    }
+    if (bool) {
+        document.forms['form'].elements['inp_markall'].title = 'alle abwählen';
+    } else {
+        document.forms['form'].elements['inp_markall'].title = 'alle markieren';
+    }
+}
+
+function mark_wo_koords() {
+    var anz = getNmbrInput();
+    for(var i = 0; i < anz; i++) {
+		var inp = getUserInput(i, anz);
+        var id = inp.value;
+        if (document.getElementById('ort_'+id).innerHTML != '' &&
+            document.forms['form'].elements['gmapkoords['+id+']'].value == '') {
+            inp.checked = true;
+        }
+    }
+}
+
+function markInvert() {
+    var anz = getNmbrInput();
+    for(var i = 0; i < anz; i++) {
+		var inp = getUserInput(i, anz);
+        var bool = inp.checked;
+        inp.checked = !bool;
+    }
+}
+
+function getKoords() {
+	var anz = getNmbrInput();
+	for(var i = 0; i < anz; i++) {
+		var inp = getUserInput(i, anz);
+        var id = inp.value;
+        if (inp.checked) {
+            myLatLng(id);
+        }
+    }
+}
+
+function getDists() {
+    var anz = getNmbrInput();
+    for(var i = 0; i < anz; i++) {
+		var inp = getUserInput(i, anz);
+        var id = inp.value;
+        if (inp.checked &&
+            document.forms['form'].elements['gmapkoords['+id+']'].value != '') {
+            eval('var gp = new GLatLng'+ document.forms['form'].elements['gmapkoords['+id+']'].value +';');
+            document.getElementById('dist_'+id).innerHTML = Math.round(gp.distanceFrom(middtl) / 1000) + ' km';
+        }
+    }
+}
+
+function markChanged() {
+    if (confirm('Vorher zur Zeit ausgewählte abwählen?')) {
+        document.forms['form'].elements['inp_markall'].checked = false;
+        markall();
+    }
+    var anz = changedUsers.length;
+    for(var i = 0; i < anz; i++) {
+        document.getElementById('cb_'+changedUsers[i]).checked = true;
+    }
+}
+
+</script>
+<form action="admin.php?googlemap" method="post" name="form">
+<table cellpadding="3" cellspacing="1" border="0">
+<tr class="Chead">
+    <td><b>Name</b></td>
+    <td><b>Land</b></td>
+    <td><b>Wohnort</b></td>
+    <td><b>errechnete Koordinaten</b></td>
+    <td colspan="2"><b>errechnete Entfernung<br />zu Mitteldeutschland</b></td>
+</tr>
+<tr class="Cdark">
+    <td><b>Markieren</b></td>
+    <td colspan="4">
+        <input type="button" value="markiere ohne Werte" onclick="mark_wo_koords();" />
+        <input type="button" value="alle markieren, die neue Werte haben" onclick="markChanged();" />
+        <input type="button" value="umkehren" onclick="markInvert();" />
+    </td>
+    <td width="15"><input name="inp_markall" type="checkbox" onclick="markall();" title="alle markieren" /></td>
+</tr>
+<tr class="Cdark">
+    <td><b>Aktion durchf&uuml;hren</b><br /><span class="smalfont">nur ausgew&auml;hlte werden ber&uuml;cksichtigt</span></td>
+    <td colspan="5">
+        <input type="button" value="Werte berechnen" onclick="getKoords();" />
+        <input type="button" value="Entfernungen berechnen" onclick="getDists();" />
+        <input type="submit" value="Werte speichern" name="submit" />
+        <input type="submit" value="Werte löschen" name="delete" />
+    </td>
+</tr>
+{EXPLODE}
+<tr class="{class}">
+    <td>{name} <a href="admin.php?user-1-{id}" target="_blank"><img src="include/images/icons/edit.gif" alt="User in neuem Fenster bearbeiten" title="User in neuem Fenster bearbeiten" border="0" /></a></td>
+    <td id="staat_{id}">{staat}</td>
+    <td id="ort_{id}">{wohnort}</td>
+    <td><input type="text" name="gmapkoords[{id}]" value="{gmapkoords}" size="25" /></td>
+    <td id="dist_{id}"></td>
+    <td><input id="cb_{id}" type="checkbox" name="user[]" value="{id}" /></td>
+</tr>
+{EXPLODE}
+</table></form>
