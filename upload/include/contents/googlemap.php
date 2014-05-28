@@ -3,19 +3,82 @@
 defined ('main') or die ('no direct access');
 require_once("googlemap/config.php");
 
+//Generate Options for Js
+$jsOptions = array();
+
+//Region Settings: latLng + zoom
+$regions = array(
+    "default" => array(47.7, 14.1, 7),
+    "EUROPE" => array(48.8, 8.5, 4),
+    "NORTH AMERICA" => array(45.0, -97.0, 3),
+    "SOUTH AMERICA" => array(-14.8, -61.2, 3),
+    "NORTH AFRICA" => array(25.4, 8.4, 4),
+    "SOUTH AFRICA" => array(-29.0, 23.7, 5),
+    "NORTH EUROPE" => array(62.6, 15.4, 4),
+    "EAST EUROPE" => array(51.9, 31.8, 4),
+    "GERMANY" => array(51.1, 10.1, 5),
+    "FRANCE" => array(47.2, 2.4, 5),
+    "SPAIN" => array(40.3, -4.0, 5),
+    "UNITED KINGDOM" => array(54.0, -4.3, 5),
+    "DENMARK" => array(56.1, 9.2, 6),
+    "SWEDEN" => array(63.2, 16.3, 4),
+    "NORWAY" => array(65.6, 13.1, 4),
+    "FINLAND" => array(65.1, 26.6, 4),
+    "NETHERLANDS" => array(52.3, 5.4, 7),
+    "BELGIUM" => array(50.7, 4.5, 7),
+    "SUISSE" => array(46.8, 8.2, 7),
+    "AUSTRIA" => array(47.7, 14.1, 7),
+    "POLAND" => array(52.1, 19.3, 6),
+    "ITALY" => array(42.6, 12.7, 5),
+    "TURKEY" => array(39.0, 34.9, 6),
+    "BRAZIL" => array(-12.0, -53.1,  4),
+    "ARGENTINA" => array(-34.3, -65.7,  3),
+    "RUSSIA" => array(65.7, 98.8, 3),
+    "ASIA" => array(20.4, 95.6, 3),
+    "CHINA" => array(36.2, 104.0, 4),
+    "JAPAN" => array(36.2, 136.8, 5),
+    "SOUTH KOREA" => array(36.6, 127.8, 6),
+    "AUSTRALIA" => array(-26.1, 134.8,  4),
+    "CANADA" => array(60.0, -97.0, 3),
+    "WORLD" => array(25.0, 8.5, 2)
+);
+
+$regionKey = (defined('GOOGLE_MAP_REGION') && isset($regions[GOOGLE_MAP_REGION])) ? GOOGLE_MAP_REGION : 'default';
+
+$jsOptions['zoom'] = $regions[$regionKey][2];
+$jsOptions['latLng'] = array($regions[$regionKey][0], $regions[$regionKey][1]);
+
+//User laden
+$jsOptions['users'] = array();
+$qry = db_query("SELECT a.id, a.name, a.staat, a.gmapkoords, a.wohnort
+				FROM prefix_user a
+				WHERE a.name <> '' AND a.wohnort <> '' AND a.gmapkoords <> '' $where
+				GROUP BY a.id, a.name, a.staat, a.gmapkoords, a.wohnort");
+while ($userRow = db_fetch_assoc($qry)) {
+    $jsOptions['users'][] = $userRow;
+}
+
+
 $title = $allgAr['title'] . ' :: Googlemap';
 $hmenu = 'Googlemap';
+$tpl = new tpl ('googlemap.htm');
+
 $design = new design ($title , $hmenu);
+$design->addheader($tpl->get(0));
+$design->addtobodyend(
+    '<script type="text/javascript" src="//maps.googleapis.com/maps/api/js?v=3&sensor=false&key=' . GOOGLE_MAP_KEY . '&language=de"></script>'
+    . '<script type="text/javascript" src="include/includes/js/googlemap.js"></script>'
+    . '<script type="text/javascript">ic.showMap(' . json_encode($jsOptions) . ');</script>');
 $design->header();
 
-$tpl = new tpl ('googlemap.htm');
-$tpl->out(0);
 
-ob_start();
+$tpl->out(1);
 
+$design->footer(1);
 ?>
 
-<script src="http://maps.google.com/maps?hl=de&file=api&amp;v=2&amp;key=<?php echo GOOGLE_MAP_KEY; ?>" type="text/javascript"></script>
+<!-- <script src="http://maps.google.com/maps?hl=de&file=api&amp;v=2&amp;key=<?php echo GOOGLE_MAP_KEY; ?>" type="text/javascript"></script> -->
+
 <script type="text/javascript">
 function newGIcon(imgsrc) {
     var icon = new GIcon();
@@ -38,81 +101,26 @@ pinIcons[3] = newGIcon('include/contents/googlemap/images/mm_20_blue.png');
 //User
 pinIcons[4] = newGIcon('include/contents/googlemap/images/mm_20_green.png');
 
-var map = new GMap2(document.getElementById("map"));
-map.addControl(new GLargeMapControl());
-map.addControl(new GMapTypeControl());
+<?php
 
-map.enableDoubleClickZoom();
+?>
+
+var mapOptions = {
+    zoom: <?php echo $mapOptions['zoom']; ?>,
+    center: new google.maps.LatLng(<?php echo $mapOptions['latLng'][0]; ?> , <?php echo $mapOptions['latLng'][1]; ?>),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+}
+var map = new google.maps.Map(document.getElementById("map"), mapOptions);
+
+
+//var map = new GMap2(document.getElementById("map"));
+//map.addControl(new GLargeMapControl());
+//map.addControl(new GMapTypeControl());
+//
+//map.enableDoubleClickZoom();
 
 <?php
-switch (strtoupper(GOOGLE_MAP_REGION)) {
-    case "EUROPE" : echo 'map.setCenter(new GLatLng(48.8, 8.5),     4);';
-        break;
-    case "NORTH AMERICA" : echo 'map.setCenter(new GLatLng(45.0, -97.0),   3);';
-        break;
-    case "SOUTH AMERICA" : echo 'map.setCenter(new GLatLng(-14.8, -61.2),  3);';
-        break;
-    case "NORTH AFRICA" : echo 'map.setCenter(new GLatLng(25.4, 8.4),     4);';
-        break;
-    case "SOUTH AFRICA" : echo 'map.setCenter(new GLatLng(-29.0, 23.7),   5);';
-        break;
-    case "NORTH EUROPE" : echo 'map.setCenter(new GLatLng(62.6, 15.4),    4);';
-        break;
-    case "EAST EUROPE" : echo 'map.setCenter(new GLatLng(51.9, 31.8),    4);';
-        break;
-    case "GERMANY" : echo 'map.setCenter(new GLatLng(51.1, 10.1),    5);';
-        break;
-    case "FRANCE" : echo 'map.setCenter(new GLatLng(47.2, 2.4),     5);';
-        break;
-    case "SPAIN" : echo 'map.setCenter(new GLatLng(40.3, -4.0),    5);';
-        break;
-    case "UNITED KINGDOM" : echo 'map.setCenter(new GLatLng(54.0, -4.3),    5);';
-        break;
-    case "DENMARK" : echo 'map.setCenter(new GLatLng(56.1, 9.2),     6);';
-        break;
-    case "SWEDEN" : echo 'map.setCenter(new GLatLng(63.2, 16.3),    4);';
-        break;
-    case "NORWAY" : echo 'map.setCenter(new GLatLng(65.6, 13.1),    4);';
-        break;
-    case "FINLAND" : echo 'map.setCenter(new GLatLng(65.1, 26.6),    4);';
-        break;
-    case "NETHERLANDS" : echo 'map.setCenter(new GLatLng(52.3, 5.4),     7);';
-        break;
-    case "BELGIUM" : echo 'map.setCenter(new GLatLng(50.7, 4.5),     7);';
-        break;
-    case "SUISSE" : echo 'map.setCenter(new GLatLng(46.8, 8.2),     7);';
-        break;
-    case "AUSTRIA" : echo 'map.setCenter(new GLatLng(47.7, 14.1),    7);';
-        break;
-    case "POLAND" : echo 'map.setCenter(new GLatLng(52.1, 19.3),    6);';
-        break;
-    case "ITALY" : echo 'map.setCenter(new GLatLng(42.6, 12.7),    5);';
-        break;
-    case "TURKEY" : echo 'map.setCenter(new GLatLng(39.0, 34.9),    6);';
-        break;
-    case "BRAZIL" : echo 'map.setCenter(new GLatLng(-12.0, -53.1),  4);';
-        break;
-    case "ARGENTINA" : echo 'map.setCenter(new GLatLng(-34.3, -65.7),  3);';
-        break;
-    case "RUSSIA" : echo 'map.setCenter(new GLatLng(65.7, 98.8),    3);';
-        break;
-    case "ASIA" : echo 'map.setCenter(new GLatLng(20.4, 95.6),    3);';
-        break;
-    case "CHINA" : echo 'map.setCenter(new GLatLng(36.2, 104.0),   4);';
-        break;
-    case "JAPAN" : echo 'map.setCenter(new GLatLng(36.2, 136.8),   5);';
-        break;
-    case "SOUTH KOREA" : echo 'map.setCenter(new GLatLng(36.6, 127.8),   6);';
-        break;
-    case "AUSTRALIA" : echo 'map.setCenter(new GLatLng(-26.1, 134.8),  4);';
-        break;
-    case "CANADA" : echo 'map.setCenter(new GLatLng(60.0, -97.0),   3);';
-        break;
-    case "WORLD" : echo 'map.setCenter(new GLatLng(25.0, 8.5),     2);';
-        break;
-    default : echo 'map.setCenter(new GLatLng(47.7, 14.1),    7);';
-        break;
-}
+
 
 switch (strtoupper(GOOGLE_MAP_TYPE)) {
     case "SATELLITE" : echo 'map.setMapType(G_SATELLITE_MAP);';
